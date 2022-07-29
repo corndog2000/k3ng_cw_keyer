@@ -2310,6 +2310,7 @@ byte async_eeprom_write = 0;
 
   ---------------------------------------------------------------------------------------------------------*/
 Adafruit_GFX_Button Reset_but;
+Adafruit_GFX_Button Clear_but;
 
 Adafruit_GFX_Button WPM_up;
 Adafruit_GFX_Button WPM_down;
@@ -2378,6 +2379,9 @@ void setup()
 
   Reset_but.initButton(&tft, 200, 120, 60, 60, ILI9341_BLACK, ILI9341_BLUE, ILI9341_WHITE, "R", 4);
   Reset_but.drawButton();
+
+  Clear_but.initButton(&tft, 40, 120, 60, 60, ILI9341_BLACK, ILI9341_MAGENTA, ILI9341_WHITE, "C", 4);
+  Clear_but.drawButton();
 
   tft.setTextColor(ILI9341_BLACK);
   tft.setTextSize(2);
@@ -2471,6 +2475,14 @@ void loop()
       */
 
       // go thru all the buttons, checking if they were pressed
+      if (Clear_but.contains(x, y)) {
+        //Serial.print("Pressing: "); Serial.println(b);
+        Clear_but.press(true);  // tell the button it is pressed
+      } else {
+        Clear_but.press(false);  // tell the button it is NOT pressed
+      }
+
+      // go thru all the buttons, checking if they were pressed
       if (Reset_but.contains(x, y)) {
         //Serial.print("Pressing: "); Serial.println(b);
         Reset_but.press(true);  // tell the button it is pressed
@@ -2560,6 +2572,13 @@ void loop()
         tft.setCursor(90, 270);
         tft.print(configuration.wpm);
         Serial.println("Reset WPM and Tone");
+      }
+      else if (Clear_but.justPressed()) {
+        tft.fillRect(5, 5, 240, ROW_OFFSET * 2, BACKGROUND_COLOR);
+        for (x = 0; x < (LCD_ROWS - 1); x++) {
+          lcd_scroll_buffer[x] = ' ';
+        }
+        Serial.println("Clear characters on screen");
       }
 
     }
