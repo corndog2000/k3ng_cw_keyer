@@ -1380,9 +1380,14 @@
 
 */
 
-#include "SPI.h"
-#include "Adafruit_GFX.h"
-#include "Adafruit_ILI9341.h"
+#include <Adafruit_GFX.h>
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_ILI9341.h>
+#include <Adafruit_FT6206.h>
+
+// The FT6206 uses hardware I2C (SCL/SDA)
+Adafruit_FT6206 ts = Adafruit_FT6206();
 
 // For the Adafruit shield, these are the default.
 #define TFT_DC 9
@@ -2304,11 +2309,25 @@ byte async_eeprom_write = 0;
 
 
   ---------------------------------------------------------------------------------------------------------*/
+Adafruit_GFX_Button Reset_but;
+
+Adafruit_GFX_Button WPM_up;
+Adafruit_GFX_Button WPM_down;
+
+Adafruit_GFX_Button Tone_up;
+Adafruit_GFX_Button Tone_down;
 
 void setup()
 {
   tft.begin();
+  if (!ts.begin(40)) {
+    Serial.println("Unable to start touchscreen.");
+  }
+  else {
+    Serial.println("Touchscreen started.");
+  }
   tft.fillScreen(BACKGROUND_COLOR);
+  //tft.fillScreen(ILI9341_RED);
   tft.setTextColor(ILI9341_BLACK);
   tft.setCursor(5, 5);
   tft.setRotation(0);
@@ -2344,6 +2363,33 @@ void setup()
   initialize_sd_card();
   initialize_debug_startup();
 
+  delay(1000);
+  tft.fillScreen(BACKGROUND_COLOR);
+
+  Tone_up.initButton(&tft, 40, 200, 60, 60, ILI9341_BLACK, ILI9341_GREEN, ILI9341_BLACK, "+", 4);
+  Tone_up.drawButton();
+  Tone_down.initButton(&tft, 200, 200, 60, 60, ILI9341_BLACK, ILI9341_RED, ILI9341_BLACK, "-", 4);
+  Tone_down.drawButton();
+
+  WPM_up.initButton(&tft, 40, 280, 60, 60, ILI9341_BLACK, ILI9341_GREEN, ILI9341_BLACK, "+", 4);
+  WPM_up.drawButton();
+  WPM_down.initButton(&tft, 200, 280, 60, 60, ILI9341_BLACK, ILI9341_RED, ILI9341_BLACK, "-", 4);
+  WPM_down.drawButton();
+
+  Reset_but.initButton(&tft, 200, 120, 60, 60, ILI9341_BLACK, ILI9341_BLUE, ILI9341_WHITE, "R", 4);
+  Reset_but.drawButton();
+
+  tft.setTextColor(ILI9341_BLACK);
+  tft.setTextSize(2);
+  tft.setCursor(80, 160);
+  tft.print("Tone Hz");
+  tft.setCursor(100, 240);
+  tft.print("WPM");
+  tft.setTextSize(4);
+  tft.setCursor(90, 190);
+  tft.print(configuration.hz_sidetone);
+  tft.setCursor(90, 270);
+  tft.print(configuration.wpm);
 }
 
 // --------------------------------------------------------------------------------------------
@@ -2352,6 +2398,8 @@ void loop()
 {
 
   // this is where the magic happens
+
+
 
 
 #ifdef OPTION_WATCHDOG_TIMER
@@ -2397,6 +2445,129 @@ void loop()
 #endif
 
   if (keyer_machine_mode == KEYER_NORMAL) {
+
+
+
+    // See if there's any  touch data for us
+    if (ts.touched())
+    {
+      // Retrieve a point
+      TS_Point p = ts.getPoint();
+      // rotate coordinate system
+      // flip it around to match the screen.
+      //Serial.print(p.x);
+      //Serial.print(" ");
+      //Serial.println(p.y);
+      p.x = map(p.x, 0, 240, 240, 0);
+      p.y = map(p.y, 0, 320, 320, 0);
+      int x = p.x;
+      int y = p.y;
+
+      /*
+        Serial.print("New: ");
+        Serial.print(x);
+        Serial.print(" ");
+        Serial.println(y);
+      */
+
+      // go thru all the buttons, checking if they were pressed
+      if (Reset_but.contains(x, y)) {
+        //Serial.print("Pressing: "); Serial.println(b);
+        Reset_but.press(true);  // tell the button it is pressed
+      } else {
+        Reset_but.press(false);  // tell the button it is NOT pressed
+      }
+
+      // go thru all the buttons, checking if they were pressed
+      if (WPM_up.contains(x, y)) {
+        //Serial.print("Pressing: "); Serial.println(b);
+        WPM_up.press(true);  // tell the button it is pressed
+      } else {
+        WPM_up.press(false);  // tell the button it is NOT pressed
+      }
+
+
+      // go thru all the buttons, checking if they were pressed
+      if (WPM_down.contains(x, y)) {
+        //Serial.print("Pressing: "); Serial.println(b);
+        WPM_down.press(true);  // tell the button it is pressed
+      } else {
+        WPM_down.press(false);  // tell the button it is NOT pressed
+      }
+
+
+      // go thru all the buttons, checking if they were pressed
+      if (Tone_up.contains(x, y)) {
+        //Serial.print("Pressing: "); Serial.println(b);
+        Tone_up.press(true);  // tell the button it is pressed
+      } else {
+        Tone_up.press(false);  // tell the button it is NOT pressed
+      }
+
+
+      // go thru all the buttons, checking if they were pressed
+      if (Tone_down.contains(x, y)) {
+        //Serial.print("Pressing: "); Serial.println(b);
+        Tone_down.press(true);  // tell the button it is pressed
+      } else {
+        Tone_down.press(false);  // tell the button it is NOT pressed
+      }
+
+
+      if (WPM_up.justPressed()) {
+        configuration.wpm += 1;
+
+        tft.setTextSize(4);
+        tft.fillRect(85, 268, 80, 50, ILI9341_WHITE);
+        tft.setCursor(90, 270);
+        tft.print(configuration.wpm);
+        Serial.println("WPM Up");
+      }
+      else if (WPM_down.justPressed()) {
+        configuration.wpm -= 1;
+        tft.setTextSize(4);
+        tft.fillRect(85, 268, 80, 50, ILI9341_WHITE);
+        tft.setCursor(90, 270);
+        tft.print(configuration.wpm);
+        Serial.println("WPM Down");
+      }
+      else if (Tone_up.justPressed()) {
+        configuration.hz_sidetone += 10;
+
+        tft.setTextSize(4);
+        tft.fillRect(85, 185, 80, 50, ILI9341_WHITE);
+        tft.setCursor(90, 190);
+        tft.print(configuration.hz_sidetone);
+        Serial.println("Tone Up");
+      }
+      else if (Tone_down.justPressed()) {
+        configuration.hz_sidetone -= 10;
+        tft.setTextSize(4);
+        tft.fillRect(85, 185, 80, 50, ILI9341_WHITE);
+        tft.setCursor(90, 190);
+        tft.print(configuration.hz_sidetone);
+        Serial.println("Tone down");
+
+      }
+      else if (Reset_but.justPressed()) {
+        configuration.hz_sidetone = 600;
+        configuration.wpm = 20;
+        tft.setTextSize(4);
+        tft.fillRect(85, 185, 80, 50, ILI9341_WHITE);
+        tft.setCursor(90, 190);
+        tft.print(configuration.hz_sidetone);
+        tft.fillRect(85, 268, 80, 50, ILI9341_WHITE);
+        tft.setCursor(90, 270);
+        tft.print(configuration.wpm);
+        Serial.println("Reset WPM and Tone");
+      }
+
+    }
+
+
+
+
+
 #ifdef FEATURE_BUTTONS
     check_buttons();
 #endif
@@ -3627,7 +3798,7 @@ void service_display() {
       switch (lcd_status) {
         case LCD_CLEAR: lcd_clear(); break;
         case LCD_SCROLL_MSG:
-          tft.fillScreen(BACKGROUND_COLOR);
+          tft.fillRect(5, 5, 240, ROW_OFFSET * 2, BACKGROUND_COLOR);
           // for (x = 0;x < LCD_ROWS;x++){
           //   //clear_display_row(x);
           //   tft.setCursor(0,x);
@@ -3648,7 +3819,7 @@ void service_display() {
         case LCD_SCROLL_MSG:
           if (lcd_scroll_buffer_dirty) {
             if (lcd_scroll_flag) {
-              tft.fillScreen(BACKGROUND_COLOR);
+              tft.fillRect(5, 5, 240, ROW_OFFSET * 2, BACKGROUND_COLOR);
               lcd_scroll_flag = 0;
             }
             // for (x = 0;x < LCD_ROWS;x++){
@@ -3700,7 +3871,7 @@ void service_display() {
 
           if (lcd_status != LCD_SCROLL_MSG) {
             lcd_status = LCD_SCROLL_MSG;
-            tft.fillScreen(BACKGROUND_COLOR);
+            tft.fillRect(5, 5, 240, ROW_OFFSET * 2, BACKGROUND_COLOR);
           }
 
           if (charin == ' ') {
@@ -3755,9 +3926,9 @@ void service_display() {
         //-------------------------------------------------------------------------------------------------------
 #ifdef FEATURE_DISPLAY
         void lcd_clear() {
-          tft.fillScreen(BACKGROUND_COLOR);
+          tft.fillRect(5, 5, 240, ROW_OFFSET * 2, BACKGROUND_COLOR);
 #ifndef FEATURE_OLED_SSD1306
-          tft.fillScreen(BACKGROUND_COLOR);//sp5iou 20180328
+          tft.fillRect(5, 5, 240, ROW_OFFSET * 2, BACKGROUND_COLOR); //sp5iou 20180328
 #endif
           lcd_status = LCD_CLEAR;
 
@@ -3771,13 +3942,13 @@ void service_display() {
           tft.backlight();
 #endif  //FEATURE_LCD_BACKLIGHT_AUTO_DIM
 #ifndef FEATURE_OLED_SSD1306
-          tft.fillScreen(BACKGROUND_COLOR);//sp5iou 20180328
+          tft.fillRect(5, 5, 240, ROW_OFFSET * 2, BACKGROUND_COLOR); //sp5iou 20180328
 #endif
 
           if (lcd_status != LCD_TIMED_MESSAGE) {
             lcd_previous_status = lcd_status;
             lcd_status = LCD_TIMED_MESSAGE;
-            tft.fillScreen(BACKGROUND_COLOR);
+            tft.fillRect(5, 5, 240, ROW_OFFSET * 2, BACKGROUND_COLOR);
           } else {
             clear_display_row(row_number);
           }
@@ -3803,7 +3974,7 @@ void service_display() {
           tft.backlight();
 #endif  //FEATURE_LCD_BACKLIGHT_AUTO_DIM
 #ifndef FEATURE_OLED_SSD1306
-          tft.fillScreen(BACKGROUND_COLOR);//sp5iou 20180328
+          tft.fillRect(5, 5, 240, ROW_OFFSET * 2, BACKGROUND_COLOR); //sp5iou 20180328
 #endif
           for (byte x = 0; x < LCD_COLUMNS; x++) {
 #ifndef FEATURE_OLED_SSD1306
@@ -8248,7 +8419,7 @@ void service_display() {
 #endif //OPTION_WATCHDOG_TIMER
 
 #ifdef FEATURE_DISPLAY
-          tft.fillScreen(BACKGROUND_COLOR);
+          tft.fillRect(5, 5, 240, ROW_OFFSET * 2, BACKGROUND_COLOR);
           for (int x = 0; x < LCD_ROWS; x++) {        // as we exit, redraw the display that we had before we went into Command Mode
             tft.setCursor(0, x);
             tft.print(lcd_scroll_buffer[x]);
@@ -18798,7 +18969,7 @@ void service_display() {
           tft.createChar(5, empty); //        For some reason this one needs to display nothing - otherwise it will display in pauses on serial interface
           tft.createChar(6, AA_capital); //   Danish, Norwegian, Swedish
           tft.createChar(7, Ntilde); //       Spanish
-          tft.fillScreen(BACKGROUND_COLOR); // you have to ;o)
+          tft.fillRect(5, 5, 240, ROW_OFFSET * 2, BACKGROUND_COLOR); // you have to ;o)
 #endif //OPTION_DISPLAY_NON_ENGLISH_EXTENSIONS
 
           if (LCD_COLUMNS < 9) {
