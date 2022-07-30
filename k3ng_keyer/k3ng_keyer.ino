@@ -2334,6 +2334,9 @@ void setup()
   tft.setRotation(0);
   tft.setTextSize(4);
 
+  pinMode(39, OUTPUT);
+  digitalWrite(39, LOW);
+
   initialize_pins();
   // initialize_serial_ports();        // Goody - this is available for testing startup issues
   // initialize_debug_startup();       // Goody - this is available for testing startup issues
